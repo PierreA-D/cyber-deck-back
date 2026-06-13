@@ -1,0 +1,200 @@
+<?php
+
+namespace App\Entity;
+
+use App\Repository\CardRepository;
+use Doctrine\Common\Collections\ArrayCollection;
+use Doctrine\Common\Collections\Collection;
+use Doctrine\DBAL\Types\Types;
+use Doctrine\ORM\Mapping as ORM;
+
+#[ORM\Entity(repositoryClass: CardRepository::class)]
+class Card
+{
+    #[ORM\Id]
+    #[ORM\GeneratedValue]
+    #[ORM\Column]
+    private ?int $id = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $name = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $type = null;
+
+    #[ORM\Column(length: 255)]
+    private ?string $color = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $attack = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $hp = null;
+
+    #[ORM\Column(nullable: true)]
+    private ?int $heal = null;
+
+    #[ORM\Column(type: Types::TEXT, nullable: true)]
+    private ?string $description = null;
+
+    /**
+     * @var Collection<int, Deck>
+     */
+    #[ORM\ManyToMany(targetEntity: Deck::class, mappedBy: 'cards')]
+    private Collection $decks;
+
+    /**
+     * @var Collection<int, User>
+     */
+    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'card')]
+    private Collection $player;
+
+    public function __construct()
+    {
+        $this->decks = new ArrayCollection();
+        $this->player = new ArrayCollection();
+    }
+
+    public function getId(): ?int
+    {
+        return $this->id;
+    }
+
+    public function getName(): ?string
+    {
+        return $this->name;
+    }
+
+    public function setName(string $name): static
+    {
+        $this->name = $name;
+
+        return $this;
+    }
+
+    public function getType(): ?string
+    {
+        return $this->type;
+    }
+
+    public function setType(string $type): static
+    {
+        $this->type = $type;
+
+        return $this;
+    }
+
+    public function getColor(): ?string
+    {
+        return $this->color;
+    }
+
+    public function setColor(string $color): static
+    {
+        $this->color = $color;
+
+        return $this;
+    }
+
+    public function getAttack(): ?int
+    {
+        return $this->attack;
+    }
+
+    public function setAttack(?int $attack): static
+    {
+        $this->attack = $attack;
+
+        return $this;
+    }
+
+    public function getHp(): ?int
+    {
+        return $this->hp;
+    }
+
+    public function setHp(?int $hp): static
+    {
+        $this->hp = $hp;
+
+        return $this;
+    }
+
+    public function getHeal(): ?int
+    {
+        return $this->heal;
+    }
+
+    public function setHeal(?int $heal): static
+    {
+        $this->heal = $heal;
+
+        return $this;
+    }
+
+    public function getDescription(): ?string
+    {
+        return $this->description;
+    }
+
+    public function setDescription(?string $description): static
+    {
+        $this->description = $description;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, Deck>
+     */
+    public function getDecks(): Collection
+    {
+        return $this->decks;
+    }
+
+    public function addDeck(Deck $deck): static
+    {
+        if (!$this->decks->contains($deck)) {
+            $this->decks->add($deck);
+            $deck->addCard($this);
+        }
+
+        return $this;
+    }
+
+    public function removeDeck(Deck $deck): static
+    {
+        if ($this->decks->removeElement($deck)) {
+            $deck->removeCard($this);
+        }
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, User>
+     */
+    public function getPlayer(): Collection
+    {
+        return $this->player;
+    }
+
+    public function addPlayer(User $player): static
+    {
+        if (!$this->player->contains($player)) {
+            $this->player->add($player);
+            $player->addCard($this);
+        }
+
+        return $this;
+    }
+
+    public function removePlayer(User $player): static
+    {
+        if ($this->player->removeElement($player)) {
+            $player->removeCard($this);
+        }
+
+        return $this;
+    }
+}
