@@ -1,4 +1,4 @@
-FROM php:8.3-fpm-alpine
+FROM php:8.3-cli-alpine
 
 # Extensions système
 RUN apk add --no-cache \
@@ -16,9 +16,15 @@ RUN docker-php-ext-install \
     intl \
     opcache
 
+WORKDIR /var/www
+
+COPY . .
+
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
-WORKDIR /var/www
+ENV COMPOSER_ALLOW_SUPERUSER=1
 
-CMD ["php-fpm"]
+RUN composer install --optimize-autoloader --no-scripts
+
+CMD ["sh", "-c", "php -S 0.0.0.0:$PORT -t public"]
