@@ -36,8 +36,9 @@ class AuthController extends AbstractController
         $em->flush();
 
         return $this->json([
-            'message' => 'User created',
+            'id'   => $user->getId(),
             'email'   => $user->getEmail(),
+            'username'   => $user->getUsername(),
         ], 201);
     }
 

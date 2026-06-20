@@ -1,4 +1,4 @@
-FROM php:8.3-cli-alpine
+FROM php:8.3-fpm-alpine
 
 # Extensions système
 RUN apk add --no-cache \
@@ -26,5 +26,3 @@ COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
 RUN composer install --optimize-autoloader --no-scripts
-
-CMD ["sh", "-c", "php -S 0.0.0.0:$PORT -t public"]

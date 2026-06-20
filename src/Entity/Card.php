@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\Card\CardType;
 use App\Repository\CardRepository;
 use Doctrine\Common\Collections\ArrayCollection;
 use Doctrine\Common\Collections\Collection;
@@ -19,8 +20,8 @@ class Card
     #[ORM\Column(length: 255)]
     private ?string $name = null;
 
-    #[ORM\Column(length: 255)]
-    private ?string $type = null;
+    #[ORM\Column(enumType: CardType::class)]
+    private ?CardType $type = null;
 
     #[ORM\Column(length: 255)]
     private ?string $color = null;
@@ -49,6 +50,9 @@ class Card
     #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'card')]
     private Collection $player;
 
+    #[ORM\OneToOne(mappedBy: 'card', cascade: ['persist', 'remove'])]
+    private ?SpellEffect $spellEffect = null;
+
     public function __construct()
     {
         $this->decks = new ArrayCollection();
@@ -72,12 +76,12 @@ class Card
         return $this;
     }
 
-    public function getType(): ?string
+    public function getType(): ?CardType
     {
         return $this->type;
     }
 
-    public function setType(string $type): static
+    public function setType(CardType $type): static
     {
         $this->type = $type;
 
@@ -194,6 +198,26 @@ class Card
         if ($this->player->removeElement($player)) {
             $player->removeCard($this);
         }
+
+        return $this;
+    }
+
+    public function getSpellEffect(): ?SpellEffect
+    {
+        return $this->spellEffect;
+    }
+
+    public function setSpellEffect(?SpellEffect $spellEffect): static
+    {
+        if ($spellEffect === null && $this->spellEffect !== null) {
+            $this->spellEffect->setCard(null);
+        }
+
+        if ($spellEffect !== null && $spellEffect->getCard() !== $this) {
+            $spellEffect->setCard($this);
+        }
+
+        $this->spellEffect = $spellEffect;
 
         return $this;
     }

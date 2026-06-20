@@ -3,6 +3,13 @@
 namespace App\Command;
 
 use App\Entity\Card;
+use App\Entity\SpellEffect;
+use App\Enum\Card\CardType;
+use App\Enum\SpellEffect\EffectType;
+use App\Enum\SpellEffect\TargetMode;
+use App\Enum\SpellEffect\TargetRule;
+use App\Enum\SpellEffect\TargetSide;
+use App\Enum\SpellEffect\TargetType;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\Console\Attribute\AsCommand;
 use Symfony\Component\Console\Command\Command;
@@ -15,7 +22,6 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 #[AsCommand(name: 'app:card:import', description: 'Import cards from a CSV file')]
 class ImportCardsCommand extends Command
 {
-    private const VALID_TYPES  = ['WARRIOR', 'DEFENDER', 'HEALER', 'CHAMPION'];
     private const VALID_COLORS = ['Red', 'Green', 'Blue'];
 
     public function __construct(private readonly EntityManagerInterface $em)
@@ -47,7 +53,6 @@ class ImportCardsCommand extends Command
             return Command::FAILURE;
         }
 
-        // Skip header row
         $header = fgetcsv($handle);
         if ($header === false) {
             $io->error('Empty CSV file.');
@@ -59,6 +64,8 @@ class ImportCardsCommand extends Command
         $errors   = [];
         $row      = 1;
 
+        // Colonnes attendues :
+        // name,type,color,attack,hp,heal,description,targetType,targetSide,targetMode,targetRule,effectType,value,duration
         while (($data = fgetcsv($handle)) !== false) {
             $row++;
 
@@ -68,17 +75,21 @@ class ImportCardsCommand extends Command
                 continue;
             }
 
-            [$name, $type, $color, $attack, $hp, $heal, $description] = array_pad($data, 7, null);
+            [
+                $name, $typeRaw, $color, $attack, $hp, $heal, $description,
+                $targetTypeRaw, $targetSideRaw, $targetModeRaw, $targetRuleRaw,
+                $effectTypeRaw, $value, $duration,
+            ] = array_pad($data, 14, null);
 
-            // Validation
             if (empty($name)) {
                 $errors[] = "Row $row: name is required.";
                 $skipped++;
                 continue;
             }
 
-            if (!in_array($type, self::VALID_TYPES, true)) {
-                $errors[] = "Row $row: invalid type \"$type\". Must be one of: " . implode(', ', self::VALID_TYPES);
+            $type = CardType::tryFrom($typeRaw ?? '');
+            if (null === $type) {
+                $errors[] = "Row $row: invalid type \"$typeRaw\". Must be one of: " . implode(', ', CardType::values());
                 $skipped++;
                 continue;
             }
@@ -87,6 +98,57 @@ class ImportCardsCommand extends Command
                 $errors[] = "Row $row: invalid color \"$color\". Must be one of: " . implode(', ', self::VALID_COLORS);
                 $skipped++;
                 continue;
+            }
+
+            $spellEffect = null;
+            if ($type->isSpell()) {
+                $targetType = TargetType::tryFrom($targetTypeRaw ?? '');
+                $targetSide = TargetSide::tryFrom($targetSideRaw ?? '');
+                $targetMode = TargetMode::tryFrom($targetModeRaw ?? '');
+                $effectType = EffectType::tryFrom($effectTypeRaw ?? '');
+                $targetRule = $targetRuleRaw ? TargetRule::tryFrom($targetRuleRaw) : null;
+
+                if (null === $targetType) {
+                    $errors[] = "Row $row: invalid targetType \"$targetTypeRaw\" for spell card.";
+                    $skipped++;
+                    continue;
+                }
+                if (null === $targetSide) {
+                    $errors[] = "Row $row: invalid targetSide \"$targetSideRaw\" for spell card.";
+                    $skipped++;
+                    continue;
+                }
+                if (null === $targetMode) {
+                    $errors[] = "Row $row: invalid targetMode \"$targetModeRaw\" for spell card.";
+                    $skipped++;
+                    continue;
+                }
+                if (null === $effectType) {
+                    $errors[] = "Row $row: invalid effectType \"$effectTypeRaw\" for spell card.";
+                    $skipped++;
+                    continue;
+                }
+                if ($targetMode === TargetMode::AUTO && null === $targetRule) {
+                    $errors[] = "Row $row: targetRule is required when targetMode is auto.";
+                    $skipped++;
+                    continue;
+                }
+                if ('' === $value || null === $value) {
+                    $errors[] = "Row $row: value is required for spell card.";
+                    $skipped++;
+                    continue;
+                }
+
+                if (!$dryRun) {
+                    $spellEffect = new SpellEffect();
+                    $spellEffect->setTargetType($targetType);
+                    $spellEffect->setTargetSide($targetSide);
+                    $spellEffect->setTargetMode($targetMode);
+                    $spellEffect->setTargetRule($targetRule);
+                    $spellEffect->setEffectType($effectType);
+                    $spellEffect->setValue((int) $value);
+                    $spellEffect->setDuration($duration !== '' && $duration !== null ? (int) $duration : null);
+                }
             }
 
             if (!$dryRun) {
@@ -98,6 +160,10 @@ class ImportCardsCommand extends Command
                 $card->setHp($hp !== '' && $hp !== null ? (int) $hp : null);
                 $card->setHeal($heal !== '' && $heal !== null ? (int) $heal : null);
                 $card->setDescription($description !== '' && $description !== null ? trim($description) : null);
+
+                if ($spellEffect !== null) {
+                    $card->setSpellEffect($spellEffect);
+                }
 
                 $this->em->persist($card);
             }
@@ -111,7 +177,6 @@ class ImportCardsCommand extends Command
             $this->em->flush();
         }
 
-        // Rapport
         if ($errors) {
             $io->warning('Some rows were skipped:');
             foreach ($errors as $error) {

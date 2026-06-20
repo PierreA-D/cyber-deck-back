@@ -2,6 +2,7 @@
 
 namespace App\Dto\Deck;
 
+use App\Dto\SpellEffect\SpellEffectResponseDto;
 use App\Entity\Card;
 
 final class DeckCardDto
@@ -11,16 +12,20 @@ final class DeckCardDto
         public readonly string $name,
         public readonly string $type,
         public readonly string $color,
+        public readonly ?SpellEffectResponseDto $spellEffect,
     ) {
     }
 
     public static function fromEntity(Card $card): self
     {
+        $spellEffect = $card->getSpellEffect();
+
         return new self(
             $card->getId() ?? 0,
             $card->getName() ?? '',
-            $card->getType() ?? '',
+            $card->getType()?->value ?? '',
             $card->getColor() ?? '',
+            null !== $spellEffect ? SpellEffectResponseDto::fromEntity($spellEffect) : null,
         );
     }
 
@@ -34,6 +39,7 @@ final class DeckCardDto
             'name' => $this->name,
             'type' => $this->type,
             'color' => $this->color,
+            'spellEffect' => $this->spellEffect?->toArray(),
         ];
     }
 }
