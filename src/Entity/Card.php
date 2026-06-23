@@ -2,6 +2,7 @@
 
 namespace App\Entity;
 
+use App\Enum\Card\CardRarity;
 use App\Enum\Card\CardType;
 use App\Repository\CardRepository;
 use Doctrine\Common\Collections\ArrayCollection;
@@ -44,19 +45,15 @@ class Card
     #[ORM\ManyToMany(targetEntity: Deck::class, mappedBy: 'cards')]
     private Collection $decks;
 
-    /**
-     * @var Collection<int, User>
-     */
-    #[ORM\ManyToMany(targetEntity: User::class, mappedBy: 'card')]
-    private Collection $player;
-
     #[ORM\OneToOne(mappedBy: 'card', cascade: ['persist', 'remove'])]
     private ?SpellEffect $spellEffect = null;
+
+    #[ORM\Column(enumType: CardRarity::class)]
+    private ?CardRarity $rarity = CardRarity::Common;
 
     public function __construct()
     {
         $this->decks = new ArrayCollection();
-        $this->player = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -175,33 +172,6 @@ class Card
         return $this;
     }
 
-    /**
-     * @return Collection<int, User>
-     */
-    public function getPlayer(): Collection
-    {
-        return $this->player;
-    }
-
-    public function addPlayer(User $player): static
-    {
-        if (!$this->player->contains($player)) {
-            $this->player->add($player);
-            $player->addCard($this);
-        }
-
-        return $this;
-    }
-
-    public function removePlayer(User $player): static
-    {
-        if ($this->player->removeElement($player)) {
-            $player->removeCard($this);
-        }
-
-        return $this;
-    }
-
     public function getSpellEffect(): ?SpellEffect
     {
         return $this->spellEffect;
@@ -218,6 +188,18 @@ class Card
         }
 
         $this->spellEffect = $spellEffect;
+
+        return $this;
+    }
+
+    public function getRarity(): ?CardRarity
+    {
+        return $this->rarity;
+    }
+
+    public function setRarity(CardRarity $rarity): static
+    {
+        $this->rarity = $rarity;
 
         return $this;
     }

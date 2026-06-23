@@ -52,17 +52,17 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
     #[ORM\OneToMany(targetEntity: Game::class, mappedBy: 'player')]
     private Collection $game;
 
-    /**
-     * @var Collection<int, Card>
-     */
-    #[ORM\ManyToMany(targetEntity: Card::class, inversedBy: 'player')]
-    private Collection $card;
+    #[ORM\OneToOne(mappedBy: 'player', cascade: ['persist', 'remove'])]
+    private ?UserCurrency $userCurrency = null;
+
+    #[ORM\OneToMany(targetEntity: UserCard::class, mappedBy: 'player', cascade: ['persist', 'remove'])]
+    private Collection $userCards;
 
     public function __construct()
     {
         $this->deck = new ArrayCollection();
         $this->game = new ArrayCollection();
-        $this->card = new ArrayCollection();
+        $this->userCards = new ArrayCollection();
     }
 
     public function getId(): ?int
@@ -229,26 +229,48 @@ class User implements UserInterface, PasswordAuthenticatedUserInterface
         return $this;
     }
 
-    /**
-     * @return Collection<int, Card>
-     */
-    public function getCard(): Collection
+    public function getUserCurrency(): ?UserCurrency
     {
-        return $this->card;
+        return $this->userCurrency;
     }
 
-    public function addCard(Card $card): static
+    public function setUserCurrency(UserCurrency $userCurrency): static
     {
-        if (!$this->card->contains($card)) {
-            $this->card->add($card);
+        if ($userCurrency->getPlayer() !== $this) {
+            $userCurrency->setPlayer($this);
+        }
+
+        $this->userCurrency = $userCurrency;
+
+        return $this;
+    }
+
+    /**
+     * @return Collection<int, UserCard>
+     */
+    public function getUserCards(): Collection
+    {
+        return $this->userCards;
+    }
+
+    public function addUserCards(UserCard $userCards): static
+    {
+        if (!$this->userCards->contains($userCards)) {
+            $this->userCards->add($userCards);
+            $userCards->setPlayer($this);
         }
 
         return $this;
     }
 
-    public function removeCard(Card $card): static
+    public function removeUserCards(UserCard $userCards): static
     {
-        $this->card->removeElement($card);
+        if ($this->userCards->removeElement($userCards)) {
+            // set the owning side to null (unless already changed)
+            if ($userCards->getPlayer() === $this) {
+                $userCards->setPlayer(null);
+            }
+        }
 
         return $this;
     }
