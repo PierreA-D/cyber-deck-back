@@ -20,7 +20,7 @@ class Booster
     private ?int $cost = null;
 
     #[ORM\Column]
-    private ?int $cardCount = null;
+    private ?int $cardCount = 5;
 
     #[ORM\Column(type: 'json')]
     private array $rarityWeights = [];

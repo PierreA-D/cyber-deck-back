@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Card;
+use App\Enum\Card\CardRarity;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
 
@@ -16,28 +17,18 @@ class CardRepository extends ServiceEntityRepository
         parent::__construct($registry, Card::class);
     }
 
-//    /**
-//     * @return Card[] Returns an array of Card objects
-//     */
-//    public function findByExampleField($value): array
-//    {
-//        return $this->createQueryBuilder('c')
-//            ->andWhere('c.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->orderBy('c.id', 'ASC')
-//            ->setMaxResults(10)
-//            ->getQuery()
-//            ->getResult()
-//        ;
-//    }
+    /**
+     * @return list<int>
+     */
+    public function findIdsByRarity(CardRarity $rarity): array
+    {
+        $rows = $this->createQueryBuilder('c')
+            ->select('c.id')
+            ->andWhere('c.rarity = :rarity')
+            ->setParameter('rarity', $rarity)
+            ->getQuery()
+            ->getScalarResult();
 
-//    public function findOneBySomeField($value): ?Card
-//    {
-//        return $this->createQueryBuilder('c')
-//            ->andWhere('c.exampleField = :val')
-//            ->setParameter('val', $value)
-//            ->getQuery()
-//            ->getOneOrNullResult()
-//        ;
-//    }
+        return array_map(static fn (array $row): int => (int) $row['id'], $rows);
+    }
 }
