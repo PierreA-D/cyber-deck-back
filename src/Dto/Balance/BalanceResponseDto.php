@@ -1,8 +1,8 @@
 <?php
 
-namespace App\Dto\Currency;
+namespace App\Dto\Balance;
 
-final class CurrencyResponseDto
+final class BalanceResponseDto
 {
     public function __construct(
         public readonly int $balance,

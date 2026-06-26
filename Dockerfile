@@ -7,7 +7,8 @@ RUN apk add --no-cache \
     libpq-dev \
     icu-dev \
     zip \
-    unzip
+    unzip \
+    netcat-openbsd
 
 # Extensions PHP
 RUN docker-php-ext-install \
@@ -18,11 +19,16 @@ RUN docker-php-ext-install \
 
 WORKDIR /var/www
 
-COPY . .
-
 # Composer
 COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
 
+COPY composer.json composer.lock ./
+
 ENV COMPOSER_ALLOW_SUPERUSER=1
 
-RUN composer install --optimize-autoloader --no-scripts
+COPY . .
+
+COPY entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+CMD ["/entrypoint.sh"]

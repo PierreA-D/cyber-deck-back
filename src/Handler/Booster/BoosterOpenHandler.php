@@ -10,6 +10,7 @@ use App\Entity\UserCard;
 use App\Entity\UserCurrency;
 use App\Enum\Card\CardRarity;
 use App\Exception\InsufficientFundsException;
+use App\Repository\BoosterOpeningRepository;
 use App\Repository\BoosterRepository;
 use App\Repository\CardRepository;
 use App\Repository\UserCardRepository;
@@ -23,6 +24,7 @@ final class BoosterOpenHandler
         private readonly BoosterRepository $boosterRepository,
         private readonly CardRepository $cardRepository,
         private readonly UserCardRepository $userCardRepository,
+        private readonly BoosterOpeningRepository $boosterOpeningRepository,
     ) {
     }
 
@@ -105,6 +107,19 @@ final class BoosterOpenHandler
         $this->entityManager->flush();
 
         return BoosterOpenDto::fromResult($booster, $currency->getBalance(), $cards);
+    }
+
+    /**
+     * @return list<BoosterOpenDto>
+     */
+    public function handleIndex(User $player): array
+    {
+        $userBoosters = $this->boosterOpeningRepository->findBy(['player' => $player], ['id' => 'ASC']);
+        
+        return array_map(
+            static fn ($booster): BoosterOpenDto => BoosterOpenDto::fromEntity($booster->getBooster()),
+            $userBoosters,
+        );
     }
 
     private function grantCard(User $player, Card $card): void

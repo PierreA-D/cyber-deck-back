@@ -5,6 +5,7 @@ namespace App\Controller;
 use App\Entity\User;
 use App\Exception\InsufficientFundsException;
 use App\Handler\Booster\BoosterOpenHandler;
+use App\Handler\Booster\BoostersOpenHandler;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\JsonResponse;
 use Symfony\Component\Routing\Attribute\Route;
@@ -13,7 +14,7 @@ use Symfony\Component\Routing\Attribute\Route;
 final class BoosterController extends AbstractController
 {
     #[Route('', name: 'api_boosters_index', methods: ['GET'])]
-    public function index(BoosterOpenHandler $handler): JsonResponse
+    public function index(BoostersOpenHandler $handler): JsonResponse
     {
         $boosters = $handler->handle();
 

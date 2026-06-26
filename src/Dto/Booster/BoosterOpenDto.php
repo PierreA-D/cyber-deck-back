@@ -15,8 +15,20 @@ final class BoosterOpenDto
         public readonly int $boosterId,
         public readonly string $boosterName,
         public readonly int $remainingBalance,
+        public readonly int $cost,
         public readonly array $cards,
     ) {
+    }
+
+    public static function fromEntity(Booster $booster): self
+    {
+        return new self(
+            $booster->getId() ?? 0,
+            $booster->getName() ?? '',
+            0,
+            $booster->getCost() ?? 0,
+            [],
+        );
     }
 
     /**
@@ -28,10 +40,11 @@ final class BoosterOpenDto
             $booster->getId() ?? 0,
             $booster->getName() ?? '',
             $remainingBalance,
+            $booster->getCost() ?? 0,
             array_map(
                 static fn (Card $card): CardResponseDto => CardResponseDto::fromEntity($card),
                 array_values($cards),
-            ),
+            )
         );
     }
 

@@ -3,19 +3,21 @@
 namespace App\Controller;
 
 use App\Entity\User;
+use App\Handler\Balance\GetBalanceHandler;
 use App\Handler\Booster\BoosterOpenHandler;
+use App\Handler\Card\GetCardsHandler;
 use Symfony\Bundle\FrameworkBundle\Controller\AbstractController;
 use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\Routing\Attribute\Route;
 
-#[Route('/api/me')]
+#[Route('/api/me', name: 'api_my_')]
 final class UserController extends AbstractController
 {
     
-    #[Route('/boosters', name: 'api_my_boosters', methods: ['GET'])]
+    #[Route('/boosters', name: 'boosters', methods: ['GET'])]
     public function indexBoosters(BoosterOpenHandler $handler): Response
     {
-        $boosters = $handler->handle($this->getAuthenticatedUser());
+        $boosters = $handler->handleIndex($this->getAuthenticatedUser());
 
         return $this->json(array_map(
             static fn ($booster): array => $booster->toArray(),
@@ -23,26 +25,24 @@ final class UserController extends AbstractController
         ));
     }
 
-    #[Route('/cards', name: 'api_my_cards', methods: ['GET'])]
-    public function indexCards(BoosterOpenHandler $handler): Response
+    #[Route('/cards', name: 'cards', methods: ['GET'])]
+    public function indexCards(GetCardsHandler $handler): Response
     {
-        $boosters = $handler->handle($this->getAuthenticatedUser());
+        $cards = $handler->handleListCardByPlayer($this->getAuthenticatedUser());
 
         return $this->json(array_map(
-            static fn ($booster): array => $booster->toArray(),
-            $boosters,
+            static fn ($card): array => $card->toArray(),
+            $cards,
         ));
     }
 
-    #[Route('/currency', name: 'api_my_currency', methods: ['GET'])]
-    public function indexCards(BoosterOpenHandler $handler): Response
+    #[Route('/balance', name: 'balance', methods: ['GET'])]
+    public function balance(GetBalanceHandler $handler): Response
     {
-        $boosters = $handler->handle($this->getAuthenticatedUser());
+        $user = $this->getAuthenticatedUser();
+        $balance = $handler->handle($user);
 
-        return $this->json(array_map(
-            static fn ($booster): array => $booster->toArray(),
-            $boosters,
-        ));
+        return $this->json($balance);
     }
 
     private function getAuthenticatedUser(): User
