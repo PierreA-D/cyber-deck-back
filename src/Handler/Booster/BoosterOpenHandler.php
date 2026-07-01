@@ -14,6 +14,7 @@ use App\Repository\BoosterOpeningRepository;
 use App\Repository\BoosterRepository;
 use App\Repository\CardRepository;
 use App\Repository\UserCardRepository;
+use Doctrine\DBAL\LockMode;
 use Doctrine\ORM\EntityManagerInterface;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
@@ -30,18 +31,36 @@ final class BoosterOpenHandler
 
     public function handle(User $player, int $boosterId): BoosterOpenDto
     {
+        return $this->entityManager->wrapInTransaction(
+            fn (): BoosterOpenDto => $this->open($player, $boosterId),
+        );
+    }
+
+    private function open(User $player, int $boosterId): BoosterOpenDto
+    {
         $booster = $this->boosterRepository->find($boosterId);
         if (null === $booster) {
             throw new NotFoundHttpException('Booster not found.');
         }
 
-        $currency = $this->resolveCurrency($player);
+        $extension = $booster->getExtension();
+        if (null === $extension) {
+            throw new NotFoundHttpException('This booster is not linked to any extension.');
+        }
 
-        if ($currency->getBalance() < $booster->getCost()) {
+        $cost = $booster->getCost() ?? 0;
+        $cardCount = $booster->getCardCount() ?? 0;
+        if ($cost < 0 || $cardCount <= 0) {
+            throw new NotFoundHttpException('This booster is misconfigured.');
+        }
+
+        $currency = $this->lockCurrency($player);
+
+        if ($currency->getBalance() < $cost) {
             throw new InsufficientFundsException();
         }
 
-        $currency->setBalance($currency->getBalance() - $booster->getCost());
+        $currency->setBalance($currency->getBalance() - $cost);
 
         /** @var array<string, list<int>> $idsByRarity */
         $idsByRarity = [];
@@ -49,7 +68,7 @@ final class BoosterOpenHandler
         $allIds = [];
 
         foreach (CardRarity::cases() as $case) {
-            $idsByRarity[$case->value] = $this->cardRepository->findIdsByRarity($case);
+            $idsByRarity[$case->value] = $this->cardRepository->findIdsByRarity($case, $extension);
             $allIds = array_merge($allIds, $idsByRarity[$case->value]);
         }
 
@@ -64,7 +83,7 @@ final class BoosterOpenHandler
         /** @var list<int> $cardIds */
         $cardIds = [];
 
-        for ($i = 0; $i < $booster->getCardCount(); ++$i) {
+        for ($i = 0; $i < $cardCount; ++$i) {
             $rarity = $this->drawRarity($booster->getRarityWeights());
 
             $candidates = array_values(array_filter(
@@ -135,6 +154,25 @@ final class BoosterOpenHandler
         }
     }
 
+    private function lockCurrency(User $player): UserCurrency
+    {
+        $currency = $this->resolveCurrency($player);
+
+        $currencyId = $currency->getId();
+        if (null !== $currencyId) {
+            $locked = $this->entityManager->find(
+                UserCurrency::class,
+                $currencyId,
+                LockMode::PESSIMISTIC_WRITE,
+            );
+            if ($locked instanceof UserCurrency) {
+                $currency = $locked;
+            }
+        }
+
+        return $currency;
+    }
+
     private function resolveCurrency(User $player): UserCurrency
     {
         $currency = $player->getUserCurrency();
@@ -152,12 +190,25 @@ final class BoosterOpenHandler
      */
     private function drawRarity(array $weights): CardRarity
     {
-        $roll = random_int(1, array_sum($weights));
-        $cumulative = 0;
+        /** @var array<string, int> $validWeights */
+        $validWeights = [];
         foreach ($weights as $rarity => $weight) {
+            if ($weight > 0 && null !== CardRarity::tryFrom((string) $rarity)) {
+                $validWeights[(string) $rarity] = $weight;
+            }
+        }
+
+        $total = array_sum($validWeights);
+        if ($total <= 0) {
+            return CardRarity::Common;
+        }
+
+        $roll = random_int(1, $total);
+        $cumulative = 0;
+        foreach ($validWeights as $rarity => $weight) {
             $cumulative += $weight;
             if ($roll <= $cumulative) {
-                return CardRarity::from($rarity);
+                return CardRarity::from((string) $rarity);
             }
         }
 

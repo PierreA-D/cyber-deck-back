@@ -25,6 +25,9 @@ class Booster
     #[ORM\Column(type: 'json')]
     private array $rarityWeights = [];
 
+    #[ORM\ManyToOne(inversedBy: 'booster')]
+    private ?Extension $extension = null;
+
     public function getId(): ?int
     {
         return $this->id;
@@ -74,6 +77,18 @@ class Booster
     public function setRarityWeights(array $rarityWeights): static
     {
         $this->rarityWeights = $rarityWeights;
+
+        return $this;
+    }
+
+    public function getExtension(): ?Extension
+    {
+        return $this->extension;
+    }
+
+    public function setExtension(?Extension $extension): static
+    {
+        $this->extension = $extension;
 
         return $this;
     }

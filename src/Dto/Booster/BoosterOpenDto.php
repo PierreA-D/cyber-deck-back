@@ -5,6 +5,7 @@ namespace App\Dto\Booster;
 use App\Dto\Card\CardResponseDto;
 use App\Entity\Booster;
 use App\Entity\Card;
+use App\Dto\Extension\ExtensionResponseDto;
 
 final class BoosterOpenDto
 {
@@ -16,7 +17,7 @@ final class BoosterOpenDto
         public readonly string $boosterName,
         public readonly int $remainingBalance,
         public readonly int $cost,
-        public readonly array $cards,
+        public readonly ExtensionResponseDto $extension,
     ) {
     }
 
@@ -27,7 +28,7 @@ final class BoosterOpenDto
             $booster->getName() ?? '',
             0,
             $booster->getCost() ?? 0,
-            [],
+            null !== $booster->getExtension() ? ExtensionResponseDto::fromEntity($booster->getExtension()) : null,
         );
     }
 
@@ -41,10 +42,7 @@ final class BoosterOpenDto
             $booster->getName() ?? '',
             $remainingBalance,
             $booster->getCost() ?? 0,
-            array_map(
-                static fn (Card $card): CardResponseDto => CardResponseDto::fromEntity($card),
-                array_values($cards),
-            )
+            $booster->getExtension()
         );
     }
 
@@ -54,13 +52,11 @@ final class BoosterOpenDto
     public function toArray(): array
     {
         return [
-            'boosterId' => $this->boosterId,
-            'boosterName' => $this->boosterName,
+            'id' => $this->boosterId,
+            'name' => $this->boosterName,
             'remainingBalance' => $this->remainingBalance,
-            'cards' => array_map(
-                static fn (CardResponseDto $card): array => $card->toArray(),
-                $this->cards,
-            ),
+            'cost' => $this->cost,
+            'extension' => $this->extension?->toArray(),
         ];
     }
 }

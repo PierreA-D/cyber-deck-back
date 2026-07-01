@@ -51,6 +51,9 @@ class Card
     #[ORM\Column(enumType: CardRarity::class)]
     private ?CardRarity $rarity = CardRarity::Common;
 
+    #[ORM\ManyToOne(inversedBy: 'card')]
+    private ?Extension $extension = null;
+
     public function __construct()
     {
         $this->decks = new ArrayCollection();
@@ -200,6 +203,18 @@ class Card
     public function setRarity(CardRarity $rarity): static
     {
         $this->rarity = $rarity;
+
+        return $this;
+    }
+
+    public function getExtension(): ?Extension
+    {
+        return $this->extension;
+    }
+
+    public function setExtension(?Extension $extension): static
+    {
+        $this->extension = $extension;
 
         return $this;
     }

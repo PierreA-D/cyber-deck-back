@@ -3,6 +3,7 @@
 namespace App\Repository;
 
 use App\Entity\Card;
+use App\Entity\Extension;
 use App\Enum\Card\CardRarity;
 use Doctrine\Bundle\DoctrineBundle\Repository\ServiceEntityRepository;
 use Doctrine\Persistence\ManagerRegistry;
@@ -20,12 +21,14 @@ class CardRepository extends ServiceEntityRepository
     /**
      * @return list<int>
      */
-    public function findIdsByRarity(CardRarity $rarity): array
+    public function findIdsByRarity(CardRarity $rarity, Extension $extension): array
     {
         $rows = $this->createQueryBuilder('c')
             ->select('c.id')
             ->andWhere('c.rarity = :rarity')
+            ->andWhere('c.extension = :extension')
             ->setParameter('rarity', $rarity)
+            ->setParameter('extension', $extension)
             ->getQuery()
             ->getScalarResult();
 
